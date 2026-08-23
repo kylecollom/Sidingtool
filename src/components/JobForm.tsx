@@ -129,9 +129,66 @@ export function JobForm({ inputs, set }: { inputs: JobInputs; set: <K extends ke
         </Section>
       )}
 
-      <Section title="Site Notes" subtitle="No material formula defined yet for these — flagged so nobody forgets to price them.">
+      <Section title="Porch Ceiling">
         <ToggleRow label="Are there any porch ceilings?" checked={inputs.hasPorchCeilings} onChange={(v) => set('hasPorchCeilings', v)} />
+        {inputs.hasPorchCeilings && (
+          <>
+            <SelectField
+              label="Porch ceiling material"
+              value={inputs.porchCeilingMaterial}
+              onChange={(v) => set('porchCeilingMaterial', v as JobInputs['porchCeilingMaterial'])}
+              options={[
+                { value: 'vinyl-solid-soffit', label: 'Vinyl solid soffit (most common)' },
+                { value: 'other', label: 'Other — specify' },
+              ]}
+            />
+            {inputs.porchCeilingMaterial === 'vinyl-solid-soffit' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <NumberField label="Porch ceiling area" unit="sq ft" value={inputs.porchCeilingAreaSqFt} onChange={(v) => set('porchCeilingAreaSqFt', v)} />
+                <NumberField label="Porch ceiling perimeter (for J-channel)" unit="ft" value={inputs.porchCeilingPerimeterFt} onChange={(v) => set('porchCeilingPerimeterFt', v)} />
+              </div>
+            ) : (
+              <TextField
+                label="What material do they want?"
+                value={inputs.porchCeilingOtherMaterial}
+                onChange={(v) => set('porchCeilingOtherMaterial', v)}
+                placeholder="e.g. beadboard, tongue & groove"
+              />
+            )}
+          </>
+        )}
+      </Section>
+
+      <Section title="3-Sided Beams">
         <ToggleRow label="Are there any 3-sided beams?" checked={inputs.hasThreeSidedBeams} onChange={(v) => set('hasThreeSidedBeams', v)} />
+        {inputs.hasThreeSidedBeams && (
+          <>
+            <SelectField
+              label="Beam wrap material"
+              value={inputs.beamMaterial}
+              onChange={(v) => set('beamMaterial', v as JobInputs['beamMaterial'])}
+              options={[
+                { value: 'metal-trim-coil', label: 'Metal trim coil' },
+                { value: 'hardie-trim', label: 'HardieTrim board' },
+              ]}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {inputs.beamMaterial === 'hardie-trim' && (
+                <SelectField
+                  label="HardieTrim width"
+                  value={inputs.beamHardieTrimWidth}
+                  onChange={(v) => set('beamHardieTrimWidth', v as JobInputs['beamHardieTrimWidth'])}
+                  options={[
+                    { value: '4', label: '4"' },
+                    { value: '6', label: '6"' },
+                    { value: '8', label: '8"' },
+                  ]}
+                />
+              )}
+              <NumberField label="Total beam length" unit="ft" value={inputs.beamTotalLengthFt} onChange={(v) => set('beamTotalLengthFt', v)} />
+            </div>
+          </>
+        )}
       </Section>
 
       <Section title="Advanced" subtitle="Extra overage on top of trim linear footage, if your crews like buying a buffer. Defaults to 0%, matching the source sheet exactly." tone="muted">

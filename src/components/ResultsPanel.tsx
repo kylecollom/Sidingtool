@@ -7,7 +7,7 @@ const SYSTEM_LABEL: Record<JobInputs['sidingSystem'], string> = {
   'vinyl-dutch-lap': 'Vinyl Dutch Lap Siding (Royal Crest D5)',
 };
 
-const CATEGORY_ORDER = ['Siding', 'Trim', 'Weather Barrier', 'Flashing', 'Sealant', 'Soffit', 'Fascia', 'Accessories'];
+const CATEGORY_ORDER = ['Siding', 'Trim', 'Weather Barrier', 'Flashing', 'Sealant', 'Soffit', 'Fascia', 'Porch Ceiling', 'Beam Wraps', 'Accessories'];
 
 function groupByCategory(items: MaterialLineItem[]) {
   const groups = new Map<string, MaterialLineItem[]>();

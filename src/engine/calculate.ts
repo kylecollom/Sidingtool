@@ -1,4 +1,12 @@
-import { CAULK_CASES, COVERAGE, GARAGE_TRIM_SIDES, MOUNTING_BLOCK_LABELS, STOCK_LENGTH_FT, WASTE } from '../data/materials';
+import {
+  CAULK_CASES,
+  COVERAGE,
+  GARAGE_TRIM_SIDES,
+  MOUNTING_BLOCK_LABELS,
+  STOCK_LENGTH_FT,
+  VINYL_SOFFIT_DEPTH_DOUBLING_THRESHOLD_IN,
+  WASTE,
+} from '../data/materials';
 import type { JobInputs, MaterialLineItem, SiteNote, TakeoffResult } from './types';
 
 const num = (v: number | '') => (v === '' ? 0 : v);
@@ -313,39 +321,59 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
   if (inputs.wantsNewSoffit) {
     const eave = num(inputs.eaveLengthFt);
     const rake = num(inputs.rakeLengthFt);
+    const depthIn = inputs.soffitDepthIn === '' ? null : Number(inputs.soffitDepthIn);
+
     if (inputs.sidingSystem === 'vinyl-dutch-lap') {
-      const depthFt = inputs.soffitDepthIn !== '' ? Number(inputs.soffitDepthIn) / 12 : null;
-      push({
-        category: 'Soffit',
-        name: 'Vinyl Vented Soffit (eaves)',
-        quantity: null,
-        unit: 'sq ft',
-        isManualEstimate: true,
-        formulaNote: `Eave length ${round1(eave)}'${depthFt ? ` × ${inputs.soffitDepthIn}" depth ≈ ${round1(eave * depthFt)} sq ft` : ' × soffit depth'} — panel coverage rate isn't in the source sheet; take off on site.`,
-      });
-      push({
-        category: 'Soffit',
-        name: 'Vinyl Solid Soffit (rakes)',
-        quantity: null,
-        unit: 'sq ft',
-        isManualEstimate: true,
-        formulaNote: `Rake length ${round1(rake)}'${depthFt ? ` × ${inputs.soffitDepthIn}" depth ≈ ${round1(rake * depthFt)} sq ft` : ' × soffit depth'} — panel coverage rate isn't in the source sheet; take off on site.`,
-      });
+      // Kyle: vinyl soffit panel covers up to 12" of depth in one course; a
+      // deeper soffit needs two courses side by side, so double the footage.
+      const needsDoubling = depthIn !== null && depthIn > VINYL_SOFFIT_DEPTH_DOUBLING_THRESHOLD_IN;
+      const multiplier = needsDoubling ? 2 : 1;
+      const depthNote = depthIn === null ? ' (enter soffit depth to confirm single vs. double course)' : needsDoubling ? ` (depth > 12", doubled for a second course)` : ' (depth ≤ 12", single course)';
+      if (eave > 0) {
+        const pieces = ceil((eave * multiplier) / STOCK_LENGTH_FT.soffitPanel);
+        push({
+          category: 'Soffit',
+          name: 'Vinyl Vented Soffit (eaves)',
+          quantity: pieces,
+          unit: 'pieces',
+          formulaNote: `Eave length ${round1(eave)}'${needsDoubling ? ' × 2' : ''} = ${round1(eave * multiplier)} ft, ÷ ${STOCK_LENGTH_FT.soffitPanel}' stock length, rounded up${depthNote}`,
+        });
+      }
+      if (rake > 0) {
+        const pieces = ceil((rake * multiplier) / STOCK_LENGTH_FT.soffitPanel);
+        push({
+          category: 'Soffit',
+          name: 'Vinyl Solid Soffit (rakes)',
+          quantity: pieces,
+          unit: 'pieces',
+          formulaNote: `Rake length ${round1(rake)}'${needsDoubling ? ' × 2' : ''} = ${round1(rake * multiplier)} ft, ÷ ${STOCK_LENGTH_FT.soffitPanel}' stock length, rounded up${depthNote}`,
+        });
+      }
       pieceFromLinear('Soffit', 'J-Channel (soffit)', eave + rake, STOCK_LENGTH_FT.vinylAccessory, ['eave + rake length']);
     } else {
-      const depthFt = inputs.soffitDepthIn !== '' ? Number(inputs.soffitDepthIn) / 12 : null;
-      const depthNote =
-        inputs.soffitDepthIn !== '' ? (Number(inputs.soffitDepthIn) <= 12 ? 'HardieSoffit 12" (depth ≤ 12")' : 'HardieSoffit 24" (depth > 12")') : 'HardieSoffit 12" or 24" — enter soffit depth to pick the width';
-      push({
-        category: 'Soffit',
-        name: depthNote,
-        quantity: null,
-        unit: 'sq ft',
-        isManualEstimate: true,
-        formulaNote: `Eave ${round1(eave)}' (vented) + rake ${round1(rake)}' (solid)${
-          depthFt ? ` × ${inputs.soffitDepthIn}" depth ≈ ${round1((eave + rake) * depthFt)} sq ft` : ''
-        } — panel coverage rate isn't in the source sheet; take off on site. Budget extra 2x4 bracing for soffit weight.`,
-      });
+      // Hardie: depth picks the panel width (12" vs 24"), not a doubled
+      // course — the wider panel covers the deeper soffit in one course.
+      const productLabel = depthIn === null ? 'HardieSoffit 12" or 24" — enter soffit depth to pick the width' : depthIn <= 12 ? 'HardieSoffit 12" (depth ≤ 12")' : 'HardieSoffit 24" (depth > 12")';
+      if (eave > 0) {
+        const pieces = ceil(eave / STOCK_LENGTH_FT.soffitPanel);
+        push({
+          category: 'Soffit',
+          name: `${productLabel} — Vented (eaves)`,
+          quantity: pieces,
+          unit: 'pieces',
+          formulaNote: `Eave length ${round1(eave)}' ÷ ${STOCK_LENGTH_FT.soffitPanel}' stock length, rounded up. Budget extra 2x4 bracing for soffit weight.`,
+        });
+      }
+      if (rake > 0) {
+        const pieces = ceil(rake / STOCK_LENGTH_FT.soffitPanel);
+        push({
+          category: 'Soffit',
+          name: `${productLabel} — Solid (rakes)`,
+          quantity: pieces,
+          unit: 'pieces',
+          formulaNote: `Rake length ${round1(rake)}' ÷ ${STOCK_LENGTH_FT.soffitPanel}' stock length, rounded up. Budget extra 2x4 bracing for soffit weight.`,
+        });
+      }
       notes.push({ text: 'Soffit: verify extra 2x4 bracing is priced in — Hardie soffit is heavy.' });
     }
   }
@@ -356,13 +384,13 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
   if (inputs.wantsNewFascia) {
     const len = num(inputs.fasciaLengthFt);
     if (inputs.sidingSystem === 'vinyl-dutch-lap') {
-      const rolls = ceil(len / COVERAGE.vinylFasciaFtPerRoll);
+      const rolls = ceil(len / COVERAGE.metalTrimCoilFtPerRoll);
       push({
         category: 'Fascia',
         name: 'Trim Coil (metal-wrap fascia)',
         quantity: rolls,
         unit: 'rolls',
-        formulaNote: `${round1(len)} ft ÷ ${COVERAGE.vinylFasciaFtPerRoll} ft/roll, rounded up`,
+        formulaNote: `${round1(len)} ft ÷ ${COVERAGE.metalTrimCoilFtPerRoll} ft/roll, rounded up`,
       });
     } else {
       pieceFromLinear('Fascia', 'HardieTrim 8" 3/4 (fascia)', len, STOCK_LENGTH_FT.hardieTrim, ['fascia length']);
@@ -371,13 +399,60 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
   }
 
   // ---------------------------------------------------------------------
-  // Site notes — no formula in the source sheet, flag for manual takeoff
+  // Porch ceiling
   // ---------------------------------------------------------------------
   if (inputs.hasPorchCeilings) {
-    notes.push({ text: 'Porch ceiling(s) present — no material formula defined yet; take off beadboard/soffit material on site.' });
+    const area = num(inputs.porchCeilingAreaSqFt);
+    const perimeter = num(inputs.porchCeilingPerimeterFt);
+    if (inputs.porchCeilingMaterial === 'vinyl-solid-soffit') {
+      if (area > 0) {
+        const pieces = ceil(area / COVERAGE.vinylPorchCeilingSqFtPerPiece);
+        push({
+          category: 'Porch Ceiling',
+          name: 'Vinyl Solid Soffit (porch ceiling)',
+          quantity: pieces,
+          unit: 'pieces',
+          formulaNote: `${round1(area)} sq ft ÷ ${COVERAGE.vinylPorchCeilingSqFtPerPiece} sq ft/piece, rounded up`,
+        });
+      } else {
+        notes.push({ text: 'Porch ceiling: enter the ceiling area (sq ft) to calculate soffit pieces needed.' });
+      }
+      pieceFromLinear('Porch Ceiling', 'J-Channel (porch ceiling perimeter)', perimeter, STOCK_LENGTH_FT.vinylAccessory, ['porch ceiling perimeter']);
+    } else {
+      notes.push({
+        text: `Porch ceiling: material is "${inputs.porchCeilingOtherMaterial || 'not specified'}" — no formula defined for this material yet; take off on site.`,
+      });
+    }
   }
+
+  // ---------------------------------------------------------------------
+  // 3-sided beam wraps
+  // ---------------------------------------------------------------------
   if (inputs.hasThreeSidedBeams) {
-    notes.push({ text: '3-sided beam(s) present — no material formula defined yet; take off wrap material on site.' });
+    const beamLen = num(inputs.beamTotalLengthFt);
+    const developedLen = beamLen * COVERAGE.beamWrapLengthMultiplier;
+    if (beamLen > 0) {
+      if (inputs.beamMaterial === 'metal-trim-coil') {
+        const rolls = ceil(developedLen / COVERAGE.metalTrimCoilFtPerRoll);
+        push({
+          category: 'Beam Wraps',
+          name: 'Trim Coil (3-sided beam wrap)',
+          quantity: rolls,
+          unit: 'rolls',
+          formulaNote: `${round1(beamLen)} ft beam length × ${COVERAGE.beamWrapLengthMultiplier} (3 sides) = ${round1(developedLen)} ft, ÷ ${COVERAGE.metalTrimCoilFtPerRoll} ft/roll, rounded up`,
+        });
+      } else {
+        pieceFromLinear(
+          'Beam Wraps',
+          `HardieTrim ${inputs.beamHardieTrimWidth}" (3-sided beam wrap)`,
+          developedLen,
+          STOCK_LENGTH_FT.hardieTrim,
+          [`beam length × ${COVERAGE.beamWrapLengthMultiplier} (3 sides)`],
+        );
+      }
+    } else {
+      notes.push({ text: '3-sided beams: enter total beam length to calculate wrap material needed.' });
+    }
   }
   if (inputs.currentSiding) {
     notes.push({ text: `Existing siding on house: ${inputs.currentSiding}${inputs.stories === '2+' ? ' — 2-story, confirm lift/staging needs' : ''}.` });

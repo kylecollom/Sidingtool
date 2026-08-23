@@ -55,27 +55,32 @@ Adding a 4th siding system means adding a data path through
 `calculate.ts` — the form, results panel, and print view don't need to
 change.
 
-## Assumptions made beyond the source sheet
+## Gaps in the source sheet, and how they were resolved
 
-The source sheet is described as "not complete," and several formulas
-reference concepts (stock lengths, garage trim geometry, mounting-block
-mapping) without stating the actual number. Every one of these is
-called out with a comment at its definition, but the full list:
+The source sheet is described as "not complete." Every formula below
+started as an open question and was resolved directly with Kyle; each is
+still called out with a comment at its definition in the code so it's
+easy to find and re-tune later.
 
-| Assumption | Where | Why |
+| Topic | Resolution | Where |
 |---|---|---|
-| HardieTrim boards stock at 12', Miratech at 12', vinyl J-channel/starter at 12.5', vinyl corner posts at 10' | `data/materials.ts` → `STOCK_LENGTH_FT` | The sheet names trim widths but never states board length. These are typical stock lengths — adjust to match your supplier. |
-| Garage trim wraps 3 sides (both legs + head), not the bottom track | `data/materials.ts` → `GARAGE_TRIM_SIDES` | Matches the sheet's own outer-trim formula ("4\" on sides, 6\" on top" — no bottom leg mentioned). Applied consistently to inner casing too. |
-| Vinyl mounting-block mapping: light fixtures → Standard block, hose bibs/pipes → Split block, outlets → Electrical block, dryer vents → Dryer Vent block | `data/materials.ts` → `MOUNTING_BLOCK_LABELS` | The sheet's own sentence describing this was cut off mid-word ("...use dryer vents for dryer ..."). This fills the gap with the standard product-line logic (split blocks are for things you can't remove to install around, like a pipe). |
-| Curved-window trim length is a single rep-measured linear-footage input, not derived from a formula | `JobForm.tsx` (Curved Windows field) | The sheet names the product (Miratech 16" / Flex-J) but gives no coverage formula. |
-| Soffit **panel quantity** is left as a manual on-site takeoff | `calculate.ts` (Soffit section) | The sheet tells you *which* product to use (12" vs 24" Hardie, vented vs solid) but never gives a coverage rate (sq ft per panel), so a computed piece count would be fabricated. The app instead shows the soffit area and flags it "Manual takeoff." |
-| Caulk is shown as the sheet's own range (1–2 cases lap / 3–4 board & batten), not collapsed to one number | `calculate.ts` (Caulk line item) | The sheet gives a range, not a formula — inventing a single number would imply false precision. |
-| Trim coil (flashing) uses the sheet's stated fallback rule, "1 roll per 12 sq, minimum 2" | `calculate.ts` (`trimCoilRolls`) | The sheet's own primary rule ("depends on how many windows/doors/band boards") isn't a formula; its explicit fallback is. |
-| Porch ceilings and 3-sided beams have no material formula yet | `calculate.ts` (Site Notes) | Not in the source sheet at all — flagged as a note so they aren't silently dropped from the quote, rather than guessing at a formula. |
+| HardieTrim board stock length | **12'** | `data/materials.ts` → `STOCK_LENGTH_FT.hardieTrim` |
+| Miratech (curved window trim) stock length | **16'** | `STOCK_LENGTH_FT.miratech` |
+| Vinyl J-Channel / Starter Strip stock length | **12'** | `STOCK_LENGTH_FT.vinylAccessory` |
+| Royal Universal corner post stock length | **10'** | `STOCK_LENGTH_FT.vinylCornerPost` |
+| Garage trim geometry | **3-sided** (both legs + head, no trim across the bottom track) — applies to both inner casing and outer trim | `GARAGE_TRIM_SIDES` |
+| Vinyl mounting-block mapping | The sheet's own sentence was cut off mid-word; resolved as: the app just asks the rep directly how many of each fixture type there are (light fixtures → Standard block, hose bibs/pipes → Split block, outlets → Electrical block, dryer vents → Dryer Vent block) — no separate mapping logic needed | `MOUNTING_BLOCK_LABELS`, `JobForm.tsx` Mounting Blocks section |
+| Curved window trim length | Rep measures and enters total linear feet on site — confirmed as workable | `curvedWindowTrimLengthFt` field |
+| Caulk quantity | Sheet's own range shown as-is (1–2 cases lap / 3–4 board & batten) rather than collapsed to one number — confirmed, no formula wanted yet | `CAULK_CASES`, `calculate.ts` Caulk line item |
+| Trim coil (flashing) | Real rule ("depends on windows/doors/band boards") not defined yet — using the sheet's stated fallback, 1 roll per 12 sq (minimum 2), until Kyle has a real formula | `trimCoilRolls()` in `calculate.ts` |
+| **Soffit panel coverage** | Hardie and vinyl soffit both stock in **12' pieces**. Vinyl: a single course covers up to 12" of depth (pieces = linear ft ÷ 12'); deeper than 12" needs a second course, so linear footage is doubled before converting to pieces. Hardie: depth instead picks the panel width (12" vs. 24"), so no doubling — the wider panel covers the deeper soffit in one course | `STOCK_LENGTH_FT.soffitPanel`, `VINYL_SOFFIT_DEPTH_DOUBLING_THRESHOLD_IN`, Soffit section of `calculate.ts` |
+| **Porch ceiling** | Usually vinyl solid soffit, 1 piece covers 10 sq ft, plus J-channel around the perimeter. The app asks the material (defaulting to vinyl solid soffit) since it can vary by job; picking "Other" flags it for manual takeoff instead of guessing | `COVERAGE.vinylPorchCeilingSqFtPerPiece`, Porch Ceiling section of `JobForm.tsx` / `calculate.ts` |
+| **3-sided beam wraps** | Material is either metal trim coil or HardieTrim board (rep's choice + HardieTrim width if applicable); quantity = total beam length × 3 (face + 2 sides), converted to rolls or pieces the normal way | `COVERAGE.beamWrapLengthMultiplier`, Beam Wraps section |
 
-Anything marked **"Manual takeoff"** in the app's output is one of these
-open gaps — it's surfaced, not hidden, so a rep knows to measure it on
-site rather than trusting a number that isn't backed by real data yet.
+### Still open
+
+- **Fascia**: `HardieTrim 8" 3/4` for Hardie jobs is usually a special order — flagged as a note, not blocking the quote.
+- If any of the resolved numbers above turn out to not match what actually gets ordered on a real job (especially the soffit-doubling assumption, which hasn't been tested against a real invoice yet), they're single constants in `data/materials.ts` — easy to correct.
 
 There's also an **Advanced → Extra trim overage** field (default 0%) if
 your crews want to pad trim orders beyond what the sheet specifies —
@@ -84,14 +89,11 @@ the box.
 
 ## Suggested next steps
 
-- Get a few real quotes run through this side-by-side with how estimators
-  quote today, and tune the constants in `data/materials.ts` (especially
-  stock lengths and the garage trim assumption) against what actually
-  gets ordered.
-- Fill in the soffit coverage rate (sq ft per HardieSoffit/vinyl-soffit
-  panel) once you have it, so soffit stops being a manual takeoff.
-- Decide on real formulas (or at least a rule of thumb) for porch
-  ceilings and 3-sided beams.
+- Run a few real quotes through this side-by-side with how estimators
+  quote today, especially to sanity-check the soffit and beam-wrap
+  formulas above against real material orders.
+- Nail down a real trim-coil (flashing) formula tied to window/door/
+  band-board count, replacing the current fallback rule.
 - If pricing ever gets added, it plugs in naturally as a second pass
   over the same `MaterialLineItem[]` output — no need to touch the
   takeoff logic.

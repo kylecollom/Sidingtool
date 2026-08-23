@@ -1,23 +1,26 @@
-// Every constant in this file comes from the "Siding Quoting Sheet" except
-// where the comment says ASSUMPTION — those fill gaps the sheet left open
-// (stock lengths, garage trim geometry, mounting-block mapping) with a
-// reasonable industry default. Tune these as real order history comes in;
-// nothing in calculate.ts should hardcode a number that belongs here.
+// Every constant in this file comes from the "Siding Quoting Sheet" or from
+// Kyle's direct answers filling gaps the sheet left open. A few (marked
+// ASSUMPTION) are still placeholders because nobody has given a real number
+// yet. Tune these as real order history comes in; nothing in calculate.ts
+// should hardcode a number that belongs here.
 
 export const WASTE = {
   standard: 0.15, // "15%"
   withDormers: 0.18, // "18% if there are dormers"
 };
 
-// ASSUMPTION: the sheet names trim widths (4", 6", 8", 2.5") but never states
-// what length the boards ship in. HardieTrim boards commonly stock at 12'.
-// Miratech and vinyl accessories (J-channel, starter, corner post) are
-// assumed at typical stock lengths too. Adjust per your supplier's stock.
+// Stock lengths, confirmed with Kyle:
+//   - HardieTrim boards (4", 6", 8", 2.5" battens): 12'
+//   - Miratech (curved window trim): 16'
+//   - Vinyl J-Channel / Starter Strip: 12'
+//   - Royal Universal corner posts (vinyl): 10'
+//   - Hardie soffit panels AND vinyl soffit panels: 12'
 export const STOCK_LENGTH_FT = {
   hardieTrim: 12,
-  miratech: 12,
-  vinylAccessory: 12.5,
+  miratech: 16,
+  vinylAccessory: 12,
   vinylCornerPost: 10,
+  soffitPanel: 12,
 };
 
 export const COVERAGE = {
@@ -28,7 +31,9 @@ export const COVERAGE = {
   housewrapSquaresPerRoll: 10, // "10 squares per roll"
   trimCoilBaseRolls: 2, // "2 rolls for flashing" baseline for lap
   trimCoilSquaresPerRollFallback: 12, // "When in doubt use 1 roll per 12 squares"
-  vinylFasciaFtPerRoll: 100, // "1 roll per 100'" trim coil for metal-wrap fascia
+  metalTrimCoilFtPerRoll: 100, // "1 roll per 100'" — used for vinyl metal-wrap fascia and metal 3-sided beam wraps
+  vinylPorchCeilingSqFtPerPiece: 10, // Kyle: vinyl solid soffit used for porch ceilings, "one piece covers 10 sq ft"
+  beamWrapLengthMultiplier: 3, // Kyle: 3-sided beam wrap material = total beam length × 3
 };
 
 export const CAULK_CASES = {
@@ -36,21 +41,22 @@ export const CAULK_CASES = {
   boardAndBatten: { low: 3, high: 4 }, // "3-4 cases for B&B"
 };
 
-// ASSUMPTION: garage door trim wraps 3 sides (both sides + head) and skips
-// the bottom track, for both the inner casing and the outer trim. If your
-// crews trim all 4 sides, add the width back in on both perimeter figures.
+// Confirmed with Kyle: garage door trim wraps 3 sides (both legs + head) and
+// skips the bottom track, for both the inner casing and the outer trim.
 export const GARAGE_TRIM_SIDES: '3-sided' | '4-sided' = '3-sided';
 
-// ASSUMPTION: mapping of vinyl mounting-block types to the accessory counts
-// the sheet's question list actually asks for. The source note was cut off
-// mid-sentence ("...use dryer vents for dryer ...") so this fills the gap:
-//   - Standard block  -> exterior light fixtures (removable to install around)
-//   - Split block      -> hose bibs / pipes (can't be removed to install around)
-//   - Electrical block -> electrical outlets
-//   - Dryer vent block -> dryer vents
+// Confirmed with Kyle: mounting-block counts are asked directly from the rep
+// (how many light fixtures / outlets / hose bibs / dryer vents), one block
+// per fixture — no further mapping logic needed.
 export const MOUNTING_BLOCK_LABELS = {
   standard: 'Standard Mounting Block (light fixtures)',
   split: 'Split Mounting Block (hose bibs / pipes)',
   electrical: 'Electrical Mounting Block (outlets)',
   dryerVent: 'Dryer Vent Mounting Block',
 };
+
+// Confirmed with Kyle: vinyl soffit panel width covers up to 12" of depth in
+// a single course; deeper soffits need two courses, so double the linear
+// footage. Hardie soffit doesn't need this — it simply switches from the
+// 12" to the 24" panel at the same depth threshold, still one course.
+export const VINYL_SOFFIT_DEPTH_DOUBLING_THRESHOLD_IN = 12;

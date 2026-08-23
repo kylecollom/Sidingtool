@@ -68,9 +68,18 @@ export interface JobInputs {
   hoseBibPipeCount: number | '';
   dryerVentCount: number | '';
 
-  // --- Site notes (no formula in source sheet, flagged for manual takeoff) ---
+  // --- Porch ceiling ---
   hasPorchCeilings: boolean;
+  porchCeilingMaterial: 'vinyl-solid-soffit' | 'other';
+  porchCeilingOtherMaterial: string; // free text when material is 'other' — no formula, flagged for manual takeoff
+  porchCeilingAreaSqFt: number | '';
+  porchCeilingPerimeterFt: number | ''; // for J-channel around the perimeter
+
+  // --- 3-sided beam wraps ---
   hasThreeSidedBeams: boolean;
+  beamMaterial: 'metal-trim-coil' | 'hardie-trim';
+  beamHardieTrimWidth: '4' | '6' | '8'; // only used when beamMaterial is 'hardie-trim'
+  beamTotalLengthFt: number | '';
 
   // --- Advanced / tunable ---
   extraTrimOveragePct: number; // additional overage applied on top of trim linear footage, default 0
@@ -134,7 +143,14 @@ export function emptyJobInputs(): JobInputs {
     hoseBibPipeCount: '',
     dryerVentCount: '',
     hasPorchCeilings: false,
+    porchCeilingMaterial: 'vinyl-solid-soffit',
+    porchCeilingOtherMaterial: '',
+    porchCeilingAreaSqFt: '',
+    porchCeilingPerimeterFt: '',
     hasThreeSidedBeams: false,
+    beamMaterial: 'metal-trim-coil',
+    beamHardieTrimWidth: '6',
+    beamTotalLengthFt: '',
     extraTrimOveragePct: 0,
   };
 }
