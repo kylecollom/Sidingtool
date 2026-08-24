@@ -48,24 +48,29 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
 
   const push = (li: MaterialLineItem) => items.push(li);
 
+  // wasteMult: pass wasteMultiplier(inputs) for line items Kyle confirmed
+  // should carry the 15%/18% siding waste (corners, J-channel, starter
+  // strip); omit (defaults to 1, no-op) for everything else.
   const pieceFromLinear = (
     category: string,
     name: string,
     totalFt: number,
     stockLengthFt: number,
     breakdown: string[],
+    wasteMult = 1,
   ) => {
     if (totalFt <= 0) return;
-    const withOverage = totalFt * overage;
+    const withWaste = totalFt * wasteMult;
+    const withOverage = withWaste * overage;
     const pieces = ceil(withOverage / stockLengthFt);
+    const wasteNote = wasteMult !== 1 ? ` (+${inputs.hasDormers ? '18% waste, dormers' : '15% waste'} → ${round1(withWaste)} ft)` : '';
+    const overageNote = overage !== 1 ? ` (+${inputs.extraTrimOveragePct}% overage → ${round1(withOverage)} ft)` : '';
     push({
       category,
       name,
       quantity: pieces,
       unit: 'pieces',
-      formulaNote: `${breakdown.join(' + ')} = ${round1(totalFt)} ft${
-        overage !== 1 ? ` (+${inputs.extraTrimOveragePct}% overage → ${round1(withOverage)} ft)` : ''
-      }, ÷ ${stockLengthFt}' stock length, rounded up`,
+      formulaNote: `${breakdown.join(' + ')} = ${round1(totalFt)} ft${wasteNote}${overageNote}, ÷ ${stockLengthFt}' stock length, rounded up`,
     });
   };
 
@@ -125,15 +130,23 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       if (amt <= 0) return;
       arr.push(`${label} (${round1(amt)}')`);
     };
+    // Kyle: corners and the bottom band/starter contribution carry the same
+    // 15%/18% waste as the siding itself; everything else in this aggregate
+    // (frieze, middle band, openings, garage trim) does not.
+    const addToWithWaste = (arr: string[], rawAmt: number, label: string) => {
+      if (rawAmt <= 0) return 0;
+      const wasted = rawAmt * waste;
+      arr.push(`${label} (${round1(rawAmt)}' × ${inputs.hasDormers ? '1.18, 18% waste' : '1.15, 15% waste'} = ${round1(wasted)}')`);
+      return wasted;
+    };
 
     // Frieze board (level + sloped) — 6"
     const friezeFt = num(inputs.levelFriezeLengthFt) + num(inputs.slopedFriezeLengthFt);
     trim6Ft += friezeFt;
     addTo(trim6, friezeFt, 'frieze board');
 
-    // Bottom band / starter — 8"
-    trim8Ft += num(inputs.levelStarterLengthFt);
-    addTo(trim8, num(inputs.levelStarterLengthFt), 'bottom band/starter');
+    // Bottom band / starter — 8" (waste applies)
+    trim8Ft += addToWithWaste(trim8, num(inputs.levelStarterLengthFt), 'bottom band/starter');
 
     // Middle band board for tall walls (board & batten only) — 6"
     if (!isLap && inputs.hasWallOver10Ft) {
@@ -141,16 +154,12 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       addTo(trim6, num(inputs.middleBandBoardLengthFt), 'middle band board (walls > 10\')');
     }
 
-    // Outside corners — need both 4" and 6" leg for every outside corner
-    trim4Ft += num(inputs.outsideCornerLengthFt);
-    trim6Ft += num(inputs.outsideCornerLengthFt);
-    addTo(trim4, num(inputs.outsideCornerLengthFt), 'outside corners (4" leg)');
-    addTo(trim6, num(inputs.outsideCornerLengthFt), 'outside corners (6" leg)');
+    // Outside corners — need both 4" and 6" leg for every outside corner (waste applies)
+    trim4Ft += addToWithWaste(trim4, num(inputs.outsideCornerLengthFt), 'outside corners (4" leg)');
+    trim6Ft += addToWithWaste(trim6, num(inputs.outsideCornerLengthFt), 'outside corners (6" leg)');
 
-    // Inside corners — 4", double length (a board on each side of the corner)
-    const insideCornerNeed = num(inputs.insideCornerLengthFt) * 2;
-    trim4Ft += insideCornerNeed;
-    addTo(trim4, insideCornerNeed, 'inside corners (×2)');
+    // Inside corners — 4", double length (a board on each side of the corner), waste applies
+    trim4Ft += addToWithWaste(trim4, num(inputs.insideCornerLengthFt) * 2, 'inside corners (×2)');
 
     // Window/door trim — 4"
     if (inputs.wantsWindowDoorWraps) {
@@ -182,14 +191,17 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
     }
 
     if (inputs.squares > 0) {
-      // House wrap
-      const wrapRolls = ceil(inputs.squares / COVERAGE.housewrapSquaresPerRoll);
+      // House wrap (waste applies, Kyle confirmed)
+      const wrappedSquares = inputs.squares * waste;
+      const wrapRolls = ceil(wrappedSquares / COVERAGE.housewrapSquaresPerRoll);
       push({
         category: 'Weather Barrier',
         name: 'House Wrap',
         quantity: Math.max(1, wrapRolls),
         unit: 'rolls',
-        formulaNote: `${inputs.squares} sq ÷ ${COVERAGE.housewrapSquaresPerRoll} sq/roll, rounded up`,
+        formulaNote: `${inputs.squares} sq × ${
+          inputs.hasDormers ? '1.18 (18% waste, dormers)' : '1.15 (15% waste)'
+        } = ${round1(wrappedSquares)} sq, ÷ ${COVERAGE.housewrapSquaresPerRoll} sq/roll, rounded up`,
       });
 
       // Trim coil (flashing)
@@ -241,19 +253,30 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
     }
     jChannelFt += friezeFt;
     if (friezeFt > 0) jChannelBreakdown.push(`frieze board, level + sloped (${round1(friezeFt)}')`);
-    pieceFromLinear('Trim', 'J-Channel', jChannelFt, STOCK_LENGTH_FT.vinylAccessory, jChannelBreakdown);
+    // J-Channel carries waste (Kyle confirmed)
+    pieceFromLinear('Trim', 'J-Channel', jChannelFt, STOCK_LENGTH_FT.vinylAccessory, jChannelBreakdown, waste);
 
-    // Outside corner posts
-    pieceFromLinear('Trim', 'Royal Universal Outside Corner Post', num(inputs.outsideCornerLengthFt), STOCK_LENGTH_FT.vinylCornerPost, [
-      'outside corner length',
-    ]);
-    // Inside corner posts — sheet does NOT double this one (single extruded post per corner)
-    pieceFromLinear('Trim', 'Royal Universal Inside Corner Post', num(inputs.insideCornerLengthFt), STOCK_LENGTH_FT.vinylCornerPost, [
-      'inside corner length',
-    ]);
+    // Outside corner posts (waste applies)
+    pieceFromLinear(
+      'Trim',
+      'Royal Universal Outside Corner Post',
+      num(inputs.outsideCornerLengthFt),
+      STOCK_LENGTH_FT.vinylCornerPost,
+      ['outside corner length'],
+      waste,
+    );
+    // Inside corner posts — sheet does NOT double this one (single extruded post per corner); waste applies
+    pieceFromLinear(
+      'Trim',
+      'Royal Universal Inside Corner Post',
+      num(inputs.insideCornerLengthFt),
+      STOCK_LENGTH_FT.vinylCornerPost,
+      ['inside corner length'],
+      waste,
+    );
 
-    // Starter strip
-    pieceFromLinear('Trim', 'Starter Strip', num(inputs.levelStarterLengthFt), STOCK_LENGTH_FT.vinylAccessory, ['level starter length']);
+    // Starter strip (waste applies)
+    pieceFromLinear('Trim', 'Starter Strip', num(inputs.levelStarterLengthFt), STOCK_LENGTH_FT.vinylAccessory, ['level starter length'], waste);
 
     // Curved windows — Flex-J, white/clear only
     if (inputs.hasCurvedWindows && num(inputs.curvedWindowTrimLengthFt) > 0) {
@@ -303,15 +326,18 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       });
     }
 
-    // House wrap
+    // House wrap (waste applies, Kyle confirmed)
     if (inputs.squares > 0) {
-      const wrapRolls = ceil(inputs.squares / COVERAGE.housewrapSquaresPerRoll);
+      const wrappedSquares = inputs.squares * waste;
+      const wrapRolls = ceil(wrappedSquares / COVERAGE.housewrapSquaresPerRoll);
       push({
         category: 'Weather Barrier',
         name: 'House Wrap',
         quantity: Math.max(1, wrapRolls),
         unit: 'rolls',
-        formulaNote: `${inputs.squares} sq ÷ ${COVERAGE.housewrapSquaresPerRoll} sq/roll, rounded up`,
+        formulaNote: `${inputs.squares} sq × ${
+          inputs.hasDormers ? '1.18 (18% waste, dormers)' : '1.15 (15% waste)'
+        } = ${round1(wrappedSquares)} sq, ÷ ${COVERAGE.housewrapSquaresPerRoll} sq/roll, rounded up`,
       });
     }
   }
