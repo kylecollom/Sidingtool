@@ -317,14 +317,15 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
   }
 
   // ---------------------------------------------------------------------
-  // Soffit (shared, but material choice differs by system)
+  // Soffit — material is asked directly, independent of the wall siding
+  // system (a Hardie-sided house can still get vinyl soffit, and vice versa)
   // ---------------------------------------------------------------------
   if (inputs.wantsNewSoffit) {
     const eave = num(inputs.eaveLengthFt);
     const rake = num(inputs.rakeLengthFt);
     const depthIn = inputs.soffitDepthIn === '' ? null : Number(inputs.soffitDepthIn);
 
-    if (inputs.sidingSystem === 'vinyl-dutch-lap') {
+    if (inputs.soffitMaterial === 'vinyl') {
       // Kyle: vinyl soffit panel covers up to 12" of depth in one course; a
       // deeper soffit needs two courses side by side, so double the footage.
       const needsDoubling = depthIn !== null && depthIn > VINYL_SOFFIT_DEPTH_DOUBLING_THRESHOLD_IN;
@@ -380,11 +381,12 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
   }
 
   // ---------------------------------------------------------------------
-  // Fascia (shared, material differs by system)
+  // Fascia — material is asked directly, independent of the wall siding
+  // system.
   // ---------------------------------------------------------------------
   if (inputs.wantsNewFascia) {
     const len = num(inputs.fasciaLengthFt);
-    if (inputs.sidingSystem === 'vinyl-dutch-lap') {
+    if (inputs.fasciaMaterial === 'metal-wrap') {
       const rolls = ceil(len / COVERAGE.metalTrimCoilFtPerRoll);
       push({
         category: 'Fascia',

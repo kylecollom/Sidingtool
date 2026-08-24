@@ -105,17 +105,41 @@ export function JobForm({ inputs, set }: { inputs: JobInputs; set: <K extends ke
         {inputs.hasGarage && <GarageDoorsInput doors={inputs.garageDoors} onChange={(d) => set('garageDoors', d)} />}
       </Section>
 
-      <Section title="Soffit & Fascia">
+      <Section title="Soffit & Fascia" subtitle="Soffit and fascia material can differ from the wall siding — ask separately.">
         <ToggleRow label="Do they want new soffit?" checked={inputs.wantsNewSoffit} onChange={(v) => set('wantsNewSoffit', v)} />
         {inputs.wantsNewSoffit && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <NumberField label="Soffit depth" unit="in" value={inputs.soffitDepthIn} onChange={(v) => set('soffitDepthIn', v)} />
-            <NumberField label="Eave length" unit="ft" value={inputs.eaveLengthFt} onChange={(v) => set('eaveLengthFt', v)} />
-            <NumberField label="Rake length" unit="ft" value={inputs.rakeLengthFt} onChange={(v) => set('rakeLengthFt', v)} />
-          </div>
+          <>
+            <SelectField
+              label="Vinyl or Hardie soffit?"
+              value={inputs.soffitMaterial}
+              onChange={(v) => set('soffitMaterial', v as JobInputs['soffitMaterial'])}
+              options={[
+                { value: 'hardie', label: 'Hardie soffit' },
+                { value: 'vinyl', label: 'Vinyl soffit' },
+              ]}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <NumberField label="Soffit depth" unit="in" value={inputs.soffitDepthIn} onChange={(v) => set('soffitDepthIn', v)} />
+              <NumberField label="Eave length" unit="ft" value={inputs.eaveLengthFt} onChange={(v) => set('eaveLengthFt', v)} />
+              <NumberField label="Rake length" unit="ft" value={inputs.rakeLengthFt} onChange={(v) => set('rakeLengthFt', v)} />
+            </div>
+          </>
         )}
         <ToggleRow label="Do they want new fascia?" checked={inputs.wantsNewFascia} onChange={(v) => set('wantsNewFascia', v)} />
-        {inputs.wantsNewFascia && <NumberField label="Fascia length" unit="ft" value={inputs.fasciaLengthFt} onChange={(v) => set('fasciaLengthFt', v)} />}
+        {inputs.wantsNewFascia && (
+          <>
+            <SelectField
+              label="Metal wrap or Hardie fascia?"
+              value={inputs.fasciaMaterial}
+              onChange={(v) => set('fasciaMaterial', v as JobInputs['fasciaMaterial'])}
+              options={[
+                { value: 'hardie', label: 'Hardie fascia' },
+                { value: 'metal-wrap', label: 'Metal wrap fascia' },
+              ]}
+            />
+            <NumberField label="Fascia length" unit="ft" value={inputs.fasciaLengthFt} onChange={(v) => set('fasciaLengthFt', v)} />
+          </>
+        )}
       </Section>
 
       {isVinyl && (

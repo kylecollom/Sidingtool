@@ -52,14 +52,17 @@ export interface JobInputs {
   hasWallOver10Ft: boolean;
   middleBandBoardLengthFt: number | '';
 
-  // --- Soffit ---
+  // --- Soffit --- (material is independent of the wall siding system —
+  // a Hardie-sided house can still get vinyl soffit, and vice versa)
   wantsNewSoffit: boolean;
+  soffitMaterial: 'vinyl' | 'hardie';
   soffitDepthIn: number | '';
   eaveLengthFt: number | '';
   rakeLengthFt: number | '';
 
-  // --- Fascia ---
+  // --- Fascia --- (also independent of the wall siding system)
   wantsNewFascia: boolean;
+  fasciaMaterial: 'metal-wrap' | 'hardie';
   fasciaLengthFt: number | '';
 
   // --- Vinyl mounting-block accessories ---
@@ -133,10 +136,12 @@ export function emptyJobInputs(): JobInputs {
     hasWallOver10Ft: false,
     middleBandBoardLengthFt: '',
     wantsNewSoffit: false,
+    soffitMaterial: 'hardie',
     soffitDepthIn: '',
     eaveLengthFt: '',
     rakeLengthFt: '',
     wantsNewFascia: false,
+    fasciaMaterial: 'hardie',
     fasciaLengthFt: '',
     exteriorLightFixtureCount: '',
     electricalOutletCount: '',
