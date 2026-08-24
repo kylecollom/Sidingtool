@@ -161,11 +161,10 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
     // Inside corners — 4", double length (a board on each side of the corner), waste applies
     trim4Ft += addToWithWaste(trim4, num(inputs.insideCornerLengthFt) * 2, 'inside corners (×2)');
 
-    // Window/door trim — 4"
-    if (inputs.wantsWindowDoorWraps) {
-      trim4Ft += num(inputs.openingsTotalPerimeterFt);
-      addTo(trim4, num(inputs.openingsTotalPerimeterFt), 'window/door openings');
-    }
+    // Window/door trim — 4". Always needed to terminate the siding at each
+    // opening, regardless of whether they're also getting new wraps.
+    trim4Ft += num(inputs.openingsTotalPerimeterFt);
+    addTo(trim4, num(inputs.openingsTotalPerimeterFt), 'window/door openings');
 
     // Garage trim: inner casing 8" (perimeter), outer 4" sides + 6" top
     if (inputs.hasGarage) {
@@ -243,14 +242,13 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       });
     }
 
-    // J-Channel: openings perimeter + frieze (level + sloped)
+    // J-Channel: openings perimeter + frieze (level + sloped). Openings
+    // perimeter always contributes — J-channel terminates the siding at each
+    // opening regardless of whether new wraps are also going in.
     const friezeFt = num(inputs.levelFriezeLengthFt) + num(inputs.slopedFriezeLengthFt);
     const jChannelBreakdown: string[] = [];
-    let jChannelFt = 0;
-    if (inputs.wantsWindowDoorWraps) {
-      jChannelFt += num(inputs.openingsTotalPerimeterFt);
-      if (num(inputs.openingsTotalPerimeterFt) > 0) jChannelBreakdown.push(`window/door openings (${round1(num(inputs.openingsTotalPerimeterFt))}')`);
-    }
+    let jChannelFt = num(inputs.openingsTotalPerimeterFt);
+    if (num(inputs.openingsTotalPerimeterFt) > 0) jChannelBreakdown.push(`window/door openings (${round1(num(inputs.openingsTotalPerimeterFt))}')`);
     jChannelFt += friezeFt;
     if (friezeFt > 0) jChannelBreakdown.push(`frieze board, level + sloped (${round1(friezeFt)}')`);
     // J-Channel carries waste (Kyle confirmed)
@@ -485,6 +483,11 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
   }
   if (inputs.currentSiding) {
     notes.push({ text: `Existing siding on house: ${inputs.currentSiding}${inputs.stories === '2+' ? ' — 2-story, confirm lift/staging needs' : ''}.` });
+  }
+  if (inputs.wantsWindowDoorWraps) {
+    notes.push({
+      text: 'Customer wants new window/door wraps — no dedicated wrap material is modeled yet (the J-channel/trim above only covers terminating the siding at each opening); price the wrap material separately.',
+    });
   }
 
   return { lineItems: items, siteNotes: notes };

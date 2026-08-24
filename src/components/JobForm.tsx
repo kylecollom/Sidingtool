@@ -80,15 +80,21 @@ export function JobForm({ inputs, set }: { inputs: JobInputs; set: <K extends ke
         </Section>
       )}
 
-      <Section title="Windows & Doors">
-        <ToggleRow label="Do they want new window and/or door wraps?" checked={inputs.wantsWindowDoorWraps} onChange={(v) => set('wantsWindowDoorWraps', v)} />
+      <Section
+        title="Windows & Doors"
+        subtitle="Openings perimeter is always needed — it drives the J-channel/trim that terminates the siding at every opening, whether or not they're also getting new wraps."
+      >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {inputs.wantsWindowDoorWraps && (
-            <NumberField label="Total perimeter of the openings" unit="ft" value={inputs.openingsTotalPerimeterFt} onChange={(v) => set('openingsTotalPerimeterFt', v)} />
-          )}
+          <NumberField label="Total perimeter of the openings" unit="ft" value={inputs.openingsTotalPerimeterFt} onChange={(v) => set('openingsTotalPerimeterFt', v)} />
           <NumberField label="How many windows?" value={inputs.windowCount} onChange={(v) => set('windowCount', v)} />
           <NumberField label="How many doors?" value={inputs.doorCount} onChange={(v) => set('doorCount', v)} />
         </div>
+        <ToggleRow
+          label="Do they want new window and/or door wraps?"
+          checked={inputs.wantsWindowDoorWraps}
+          onChange={(v) => set('wantsWindowDoorWraps', v)}
+          description="No dedicated wrap material is modeled yet — this just flags it as a note for the crew."
+        />
         <ToggleRow label="Are there any curved windows?" checked={inputs.hasCurvedWindows} onChange={(v) => set('hasCurvedWindows', v)} />
         {inputs.hasCurvedWindows && (
           <NumberField
