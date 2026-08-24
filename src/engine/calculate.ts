@@ -433,13 +433,13 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
     const developedLen = beamLen * COVERAGE.beamWrapLengthMultiplier;
     if (beamLen > 0) {
       if (inputs.beamMaterial === 'metal-trim-coil') {
-        const rolls = ceil(developedLen / COVERAGE.metalTrimCoilFtPerRoll);
+        const rolls = ceil(developedLen / COVERAGE.metalTrimCoilSqFtPerRoll);
         push({
           category: 'Beam Wraps',
           name: 'Trim Coil (3-sided beam wrap)',
           quantity: rolls,
           unit: 'rolls',
-          formulaNote: `${round1(beamLen)} ft beam length × ${COVERAGE.beamWrapLengthMultiplier} (3 sides) = ${round1(developedLen)} ft, ÷ ${COVERAGE.metalTrimCoilFtPerRoll} ft/roll, rounded up`,
+          formulaNote: `${round1(beamLen)} ft beam length × ${COVERAGE.beamWrapLengthMultiplier} (3 sides) = ${round1(developedLen)} sq ft, ÷ ${COVERAGE.metalTrimCoilSqFtPerRoll} sq ft/roll, rounded up`,
         });
       } else {
         pieceFromLinear(

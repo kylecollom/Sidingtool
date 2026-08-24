@@ -31,7 +31,8 @@ export const COVERAGE = {
   housewrapSquaresPerRoll: 10, // "10 squares per roll"
   trimCoilBaseRolls: 2, // "2 rolls for flashing" baseline for lap
   trimCoilSquaresPerRollFallback: 12, // "When in doubt use 1 roll per 12 squares"
-  metalTrimCoilFtPerRoll: 100, // "1 roll per 100'" — used for vinyl metal-wrap fascia and metal 3-sided beam wraps
+  metalTrimCoilFtPerRoll: 100, // "1 roll per 100'" — vinyl metal-wrap fascia, linear feet
+  metalTrimCoilSqFtPerRoll: 100, // Kyle: for 3-sided beam wraps, "one roll covers 100 sq ft" — area basis, not linear feet
   vinylPorchCeilingSqFtPerPiece: 10, // Kyle: vinyl solid soffit used for porch ceilings, "one piece covers 10 sq ft"
   beamWrapLengthMultiplier: 3, // Kyle: 3-sided beam wrap material = total beam length × 3
 };
