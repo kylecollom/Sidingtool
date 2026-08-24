@@ -264,12 +264,13 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       notes.push({ text: 'Curved windows flagged, but no trim length was entered — measure on site and add Flex-J Channel (white/clear only).' });
     }
 
-    // Mounting blocks
+    // Mounting blocks — counts come straight from the rep, but ceil() guards
+    // against a fractional entry (can't buy half a mounting block).
     if (num(inputs.exteriorLightFixtureCount) > 0) {
       push({
         category: 'Accessories',
         name: MOUNTING_BLOCK_LABELS.standard,
-        quantity: num(inputs.exteriorLightFixtureCount),
+        quantity: ceil(num(inputs.exteriorLightFixtureCount)),
         unit: 'each',
         formulaNote: '1 per exterior light fixture',
       });
@@ -278,7 +279,7 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       push({
         category: 'Accessories',
         name: MOUNTING_BLOCK_LABELS.split,
-        quantity: num(inputs.hoseBibPipeCount),
+        quantity: ceil(num(inputs.hoseBibPipeCount)),
         unit: 'each',
         formulaNote: '1 per hose bib / pipe penetration',
       });
@@ -287,7 +288,7 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       push({
         category: 'Accessories',
         name: MOUNTING_BLOCK_LABELS.electrical,
-        quantity: num(inputs.electricalOutletCount),
+        quantity: ceil(num(inputs.electricalOutletCount)),
         unit: 'each',
         formulaNote: '1 per exterior electrical outlet',
       });
@@ -296,7 +297,7 @@ export function calculateTakeoff(inputs: JobInputs): TakeoffResult {
       push({
         category: 'Accessories',
         name: MOUNTING_BLOCK_LABELS.dryerVent,
-        quantity: num(inputs.dryerVentCount),
+        quantity: ceil(num(inputs.dryerVentCount)),
         unit: 'each',
         formulaNote: '1 per dryer vent',
       });
